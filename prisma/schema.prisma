@@ -1,0 +1,143 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id               String         @id @default(uuid())
+  name             String
+  notificationEmail String?
+  recallToken      String?        @unique
+  timezone         String
+  locale           String
+  elevenLabsVoiceId String?
+  planCode         String
+  planMinutesLimit Int
+  hardLimit        Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  numbers      ClientNumber[]
+  callSessions CallSession[]
+  intakeLeads  IntakeLead[]
+  users        User[]
+  browserCallIntents BrowserCallIntent[]
+  intakeConfig ClientIntakeConfig?
+
+  plan Plan? @relation(fields: [planCode], references: [code])
+
+  @@index([planCode])
+}
+
+model ClientNumber {
+  id                String       @id @default(uuid())
+  clientId          String
+  twilioPhoneNumber String
+  description       String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  callSessions CallSession[]
+
+  @@unique([clientId, twilioPhoneNumber])
+  @@index([twilioPhoneNumber])
+}
+
+model Plan {
+  code            String   @id
+  includedMinutes Int
+  description     String
+  active          Boolean  @default(true)
+
+  clients Client[]
+}
+
+model CallSession {
+  id              String      @id @default(uuid())
+  clientId        String
+  clientNumberId  String
+  twilioCallSid   String      @unique
+  mediaStreamToken String?    @unique
+  fromNumber      String
+  toNumber        String
+  startedAt       DateTime
+  endedAt         DateTime?
+  billableSeconds Int         @default(0)
+  status          String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientNumber ClientNumber @relation(fields: [clientNumberId], references: [id], onDelete: Cascade)
+  intakeLeads  IntakeLead[]
+
+  @@index([clientId, startedAt])
+}
+
+model IntakeLead {
+  id                   String    @id @default(uuid())
+  clientId             String
+  callSessionId        String
+  capturedName         String?
+  capturedPhone        String?
+  capturedEmail        String?
+  capturedReason       String?
+  preferredContactTime String?
+  rawSummary           String?
+  extraFields          Json?
+  calledAt             DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  callSession CallSession @relation(fields: [callSessionId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, createdAt])
+}
+
+model ClientIntakeConfig {
+  id        String   @id @default(uuid())
+  clientId  String   @unique
+  steps     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id           String   @id @default(uuid())
+  clientId     String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("owner")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  browserCallIntents BrowserCallIntent[]
+
+  @@index([clientId])
+}
+
+model BrowserCallIntent {
+  id        String    @id @default(uuid())
+  clientId  String
+  userId    String
+  toNumber  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, expiresAt])
+  @@index([userId, expiresAt])
+}
