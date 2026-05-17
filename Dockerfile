@@ -14,11 +14,8 @@ RUN npm ci
 COPY prisma ./prisma
 RUN npx prisma generate
 
-COPY next.config.js tsconfig.json tsconfig.server.json next-env.d.ts ./
-COPY src ./src
-COPY pages ./pages
-COPY styles ./styles
-COPY public ./public
+COPY . .
+RUN mkdir -p public
 
 RUN npm run build
 

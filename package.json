@@ -10,7 +10,8 @@
     "test:harness": "npm run build && node scripts/barge-in-harness.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
-    "prisma:migrate:deploy": "prisma migrate deploy"
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
